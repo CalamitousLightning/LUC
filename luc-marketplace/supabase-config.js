@@ -21,7 +21,7 @@ window.LUC_ADMIN_EMAIL = "test@agent.com";
 
 // WhatsApp number for "Checkout via WhatsApp" (international format, no + or spaces).
 // Example: Ghana number 024 123 4567 -> "233241234567"
-window.LUC_WHATSAPP_NUMBER = "233241234567";
+window.LUC_WHATSAPP_NUMBER = "233245955704";
 
 // Paystack PUBLIC key (starts with pk_test_ or pk_live_). Never put the secret key here.
 window.LUC_PAYSTACK_PUBLIC_KEY = "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
