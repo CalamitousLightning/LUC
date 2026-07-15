@@ -114,8 +114,13 @@ async function createOrder({ paymentMethod, paymentStatus, paystackReference = n
   return data;
 }
 
-/* ===== Paystack ===== */
-document.getElementById("paystackBtn").addEventListener("click", () => {
+/* ===== Paystack =====
+   Flow: create the order first as "pending" -> open Paystack using the
+   order's own id as the reference -> on success, ask our Netlify function
+   to verify the transaction server-side (with the secret key) before the
+   order is ever marked paid. The client's "success" callback is NOT
+   trusted on its own — see netlify/functions/verify-paystack.js. */
+document.getElementById("paystackBtn").addEventListener("click", async () => {
   const details = getDeliveryDetails();
   if (!details) return;
 
@@ -125,26 +130,60 @@ document.getElementById("paystackBtn").addEventListener("click", () => {
     return;
   }
 
+  const paystackBtn = document.getElementById("paystackBtn");
+  paystackBtn.disabled = true;
+
+  const order = await createOrder({ paymentMethod: "paystack", paymentStatus: "pending" });
+  if (!order) {
+    paystackBtn.disabled = false;
+    return;
+  }
+
   const handler = PaystackPop.setup({
     key: window.LUC_PAYSTACK_PUBLIC_KEY,
     email: currentUser.email,
     amount: Math.round(total * 100), // GHS to pesewas
     currency: "GHS",
-    ref: `LUC-${Date.now()}`,
+    ref: order.id, // ties the Paystack transaction directly to this order
     callback: function (response) {
-      createOrder({
-        paymentMethod: "paystack",
-        paymentStatus: "paid",
-        paystackReference: response.reference,
-      }).then((order) => {
-        if (order) {
-          lucClearCart();
-          window.location.href = "orders.html";
-        }
+      showMsg("Confirming your payment...", "success");
+      supabaseClient.auth.getSession().then(({ data: { session } }) => {
+        fetch("/api/verify-paystack", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ reference: response.reference }),
+        })
+          .then((res) => res.json())
+          .then((result) => {
+            if (result.success) {
+              lucClearCart();
+              window.location.href = "orders.html";
+            } else {
+              showMsg(
+                "We received your payment but couldn't confirm it automatically. " +
+                  "Your order is saved as pending — contact us if it isn't updated shortly.",
+                "error"
+              );
+            }
+          })
+          .catch(() => {
+            showMsg(
+              "We received your payment but couldn't confirm it automatically. " +
+                "Your order is saved as pending — contact us if it isn't updated shortly.",
+              "error"
+            );
+          })
+          .finally(() => {
+            paystackBtn.disabled = false;
+          });
       });
     },
     onClose: function () {
-      showMsg("Payment window closed. Your cart is still saved.", "error");
+      showMsg("Payment window closed. Your order is saved as pending — you can retry from My Orders.", "error");
+      paystackBtn.disabled = false;
     },
   });
   handler.openIframe();

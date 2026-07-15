@@ -304,12 +304,12 @@ async function loadOrdersTable() {
 
   if (error) {
     console.error(error);
-    ordersTableBody.innerHTML = `<tr><td colspan="6">Failed to load orders.</td></tr>`;
+    ordersTableBody.innerHTML = `<tr><td colspan="7">Failed to load orders.</td></tr>`;
     return;
   }
 
   if (!data || data.length === 0) {
-    ordersTableBody.innerHTML = `<tr><td colspan="6">No orders yet.</td></tr>`;
+    ordersTableBody.innerHTML = `<tr><td colspan="7">No orders yet.</td></tr>`;
     return;
   }
 
@@ -331,6 +331,13 @@ function orderRowHtml(order) {
       <td class="order-items-cell">${escapeHtml(itemsText)}</td>
       <td>GHS ${Number(order.total).toFixed(2)}</td>
       <td><span class="status-pill status-${order.payment_status}">${escapeHtml(order.payment_status)}</span><br><span class="hint">${escapeHtml(order.payment_method)}</span></td>
+      <td>
+        ${
+          order.payment_status === "pending"
+            ? `<button class="btn btn-outline btn-mark-paid" data-id="${order.id}">Mark as Paid</button>`
+            : `<span class="hint">—</span>`
+        }
+      </td>
       <td>
         <select class="order-status-select" data-id="${order.id}">
           ${statusOptions}
@@ -354,6 +361,32 @@ ordersTableBody.addEventListener("change", async (e) => {
   if (error) {
     alert("Failed to update order status: " + error.message);
   }
+});
+
+ordersTableBody.addEventListener("click", async (e) => {
+  if (!e.target.classList.contains("btn-mark-paid")) return;
+
+  const id = e.target.dataset.id;
+  if (!confirm("Mark this order as paid? Only do this once you've confirmed the transfer (e.g. MoMo) yourself.")) {
+    return;
+  }
+
+  e.target.disabled = true;
+  e.target.textContent = "Saving...";
+
+  const { error } = await supabaseClient
+    .from("luc_orders")
+    .update({ payment_status: "paid" })
+    .eq("id", id);
+
+  if (error) {
+    alert("Failed to update payment status: " + error.message);
+    e.target.disabled = false;
+    e.target.textContent = "Mark as Paid";
+    return;
+  }
+
+  loadOrdersTable();
 });
 
 /* =========================================================
