@@ -145,7 +145,6 @@ button { font-family: inherit; }
   color: var(--text);
 }
 .main-nav a:last-child { border-bottom: none; }
-.nav-admin { color: var(--blue); font-weight: 700; }
 
 .main-nav[style*="position:static"] {
   flex-shrink: 0;
@@ -463,6 +462,19 @@ button { font-family: inherit; }
   padding: 20px;
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+/* Hidden admin entry point — looks like plain copyright text, not a link */
+.footer-admin-entry {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.footer-admin-entry:hover,
+.footer-admin-entry:visited,
+.footer-admin-entry:active {
+  color: inherit;
+  text-decoration: none;
 }
 
 /* ===== BOTTOM MOBILE NAV (Jumia/Temu style) ===== */
